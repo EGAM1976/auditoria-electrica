@@ -959,13 +959,14 @@ function vistaPanel(v){
     const ord={Alta:0,Media:1,Baja:2};
     [...nc].sort((a,b)=>ord[a.crit]-ord[b.crit]).slice(0,60).forEach(r=>{
       const d=R[r.key]||{};
+      const fotos=(d.f||[]).map(c=>FOTOS[c]?`<img src="${FOTOS[c].data}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">`:"").join("");
       h+=`<div class="nc"><div class="h">${esc(r.equipo)} · ${r.id}
             <span class="pt-cr cr-${r.crit}">${r.crit}</span></div>
         <div class="m">${esc(r.linea)} · ${esc(r.cat)}</div>
         <div class="m">${esc(r.texto)}</div>
         ${d.o?`<div class="o">${esc(d.o)}</div>`:'<div class="o">Sin observación registrada</div>'}
         ${d.c?`<div class="o" style="background:var(--amberbg);color:var(--amber)">Causa: ${esc(d.c)}</div>`:""}
-        ${(d.f||[]).length?`<div class="m">Evidencia: ${(d.f||[]).join(", ")}</div>`:""}</div>`;
+        ${fotos?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${fotos}</div>`:""}</div>`;
     });
     if(nc.length>60) h+=`<p style="margin:0">Se muestran las 60 primeras. El Excel las incluye todas.</p>`;
     h+=`</div>`;
@@ -998,10 +999,11 @@ function vistaPanel(v){
     h+=`<div class="mtxw"><table class="mtx"><thead><tr>
       <th class="rh">Línea</th><th class="rh">Máquina</th><th>ID</th><th class="rh">Descripción</th><th>Fotos</th></tr></thead><tbody>`;
     hlAll.forEach(({equipo,linea,idx,hl})=>{
+      const fts=(hl.f||[]).map(c=>FOTOS[c]?`<img src="${FOTOS[c].data}" style="width:46px;height:46px;object-fit:cover;border-radius:4px;border:1px solid var(--line)">`:"").join("");
       h+=`<tr><td class="rh">${esc(linea)}</td><td class="rh">${esc(equipo)}</td>
         <td>HL.${idx+1}</td>
-        <td class="rh" style="white-space:normal;max-width:220px">${esc(hl.obs||"Sin descripción")}</td>
-        <td>${(hl.f||[]).length||"·"}</td></tr>`;
+        <td class="rh" style="white-space:normal;max-width:200px">${esc(hl.obs||"Sin descripción")}</td>
+        <td>${fts?`<div style="display:flex;gap:4px;flex-wrap:wrap">${fts}</div>`:"·"}</td></tr>`;
     });
     h+=`</tbody></table></div></div>`;
   }
@@ -1081,6 +1083,10 @@ function vistaExportar(v){
     <p>${nF} evidencia${nF===1?"":"s"} con su código, máquina y hallazgo. Se abre en el navegador y se puede guardar como PDF.</p>
     <button class="act sec" id="expFotos" ${nF?"":"disabled"}>Descargar informe fotográfico</button></div>
 
+  <div class="box" style="border-left:4px solid var(--focus)"><h3>Paquete para el Panel de PC</h3>
+    <p>Un archivo con los resultados <b>y las fotos incrustadas</b>. Cárguelo en el Panel Corporativo de su computadora para ver las evidencias junto a cada hallazgo.</p>
+    <button class="act" id="expPaquete">Descargar paquete con fotos</button></div>
+
   <div class="box"><h3>Datos en CSV</h3>
     <p>Por si prefiere revisar los datos sueltos o pegarlos a mano en <code>K4</code>.</p>
     <button class="act sec" id="expCsv">Descargar CSV</button></div>
@@ -1107,10 +1113,37 @@ function vistaExportar(v){
   const bx=$("#expXlsx"); if(bx) bx.onclick=descargarExcel;
   $("#camPl").onclick=()=>$("#filePl").click();
   $("#expFotos").onclick=exportarFotos;
+  $("#expPaquete").onclick=exportarPaquete;
   $("#expCsv").onclick=exportarCSV;
   $("#expBk").onclick=exportarBackup;
   $("#impBk").onclick=()=>$("#fileBk").click();
   $("#borrar").onclick=borrarTodo;
+}
+
+// Paquete para el Panel de PC: resultados + fotos incrustadas en un JSON.
+// El Panel lo cruza con el Excel por el código de foto (F-001…).
+function exportarPaquete(){
+  const datos={
+    v:1, fecha:new Date().toISOString(),
+    checklist: ROWS.map(r=>{ const d=R[r.key]||{};
+      return {linea:r.linea, equipo:r.equipo, maquina:r.maquina, id:r.id, cat:r.cat,
+              texto:r.texto, crit:r.crit, estado:d.e||"", obs:d.o||"", fotos:d.f||[]}; }),
+    hallazgos: [],
+    fotos: {}
+  };
+  Object.entries(HALLAZGOS).forEach(([tk,hls])=>{
+    const t2=TABLEROS.find(x=>x.key===tk); if(!t2) return;
+    (hls||[]).forEach((hl,i)=>datos.hallazgos.push(
+      {linea:t2.linea, equipo:t2.equipo, id:"HL."+(i+1), obs:hl.obs||"", fotos:hl.f||[]}));
+  });
+  // sólo las fotos que están referenciadas
+  const usadas=new Set();
+  datos.checklist.forEach(r=>(r.fotos||[]).forEach(c=>usadas.add(c)));
+  datos.hallazgos.forEach(r=>(r.fotos||[]).forEach(c=>usadas.add(c)));
+  usadas.forEach(c=>{ if(FOTOS[c]) datos.fotos[c]=FOTOS[c].data; });
+
+  bajar(`paquete_panel_${hoy()}.json`, JSON.stringify(datos), "application/json");
+  toast("Paquete descargado");
 }
 
 async function pintaEspacio(nFotos){
