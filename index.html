@@ -512,7 +512,48 @@ async function generarExcel(plantillaAB){
     valores["M"+f] = d.c || "";
     valores["N"+f] = (d.f||[]).join(", ");
   });
-  const hoja = escribirCeldas(await crudo(ruta), valores);
+
+  // Hallazgos libres: se escriben como filas nuevas al final del Checklist.
+  // Así aparecen en el Panel de PC igual que cualquier no conformidad.
+  let xmlHoja = await crudo(ruta);
+  let filaHL = 4 + ROWS.length;
+  const filasHL = [];
+  Object.entries(HALLAZGOS).forEach(([tk,hls])=>{
+    const t2 = TABLEROS.find(x=>x.key===tk);
+    if(!t2) return;
+    (hls||[]).forEach((hl,i)=>{
+      // Construir una fila XML con las mismas columnas del Checklist:
+      // A=ID, B=Linea, C=Maquina, D=Equipo, E=Cat, F=Categoria, G=N, H=Verificacion, J=Criticidad, K=Cumple, L=Obs, N=Evidencia
+      const escX = v => String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const cel = (r,c,v) => v?`<c r="${c}${r}" t="inlineStr"><is><t xml:space="preserve">${escX(v)}</t></is></c>`:"";
+      const f = filaHL;
+      filasHL.push(
+        `<row r="${f}">` +
+        cel(f,"A","HL."+(i+1)) +
+        cel(f,"B",t2.linea) +
+        cel(f,"C",t2.maquina) +
+        cel(f,"D",t2.equipo) +
+        cel(f,"E","HL") +
+        cel(f,"F","Hallazgo libre") +
+        cel(f,"G",String(i+1)) +
+        cel(f,"H",hl.obs||hl.texto||"Hallazgo libre") +
+        cel(f,"J","Alta") +
+        cel(f,"K","No") +
+        cel(f,"L",hl.obs||"") +
+        cel(f,"N",(hl.f||[]).join(", ")) +
+        `</row>`
+      );
+      filaHL++;
+    });
+  });
+
+  // Insertar las filas justo antes del cierre de <sheetData>
+  if(filasHL.length){
+    xmlHoja = xmlHoja.replace("</sheetData>", filasHL.join("")+"</sheetData>");
+  }
+
+  // Escribir las celdas K/L/M/N del checklist sobre el XML ya modificado
+  const hoja = escribirCeldas(xmlHoja, valores);
 
   // que Excel recalcule el resumen al abrir
   let wbx = /<calcPr/.test(wbx0)
@@ -929,6 +970,42 @@ function vistaPanel(v){
     if(nc.length>60) h+=`<p style="margin:0">Se muestran las 60 primeras. El Excel las incluye todas.</p>`;
     h+=`</div>`;
   }
+
+  // ── dashboard de hallazgos libres ──
+  const hlAll=[];
+  Object.entries(HALLAZGOS).forEach(([tk,hls])=>{
+    const t2=TABLEROS.find(x=>x.key===tk);
+    if(!t2) return;
+    if(filtroLinea && t2.linea!==filtroLinea) return;
+    (hls||[]).forEach((hl,i)=>hlAll.push({equipo:t2.equipo,linea:t2.linea,idx:i,hl}));
+  });
+  if(hlAll.length){
+    // resumen por línea
+    const porLinea={};
+    hlAll.forEach(x=>porLinea[x.linea]=(porLinea[x.linea]||0)+1);
+    h+=`<div class="box" style="border-left:4px solid #c9761c">
+      <h3>Hallazgos libres (${hlAll.length})</h3>
+      <p>Observaciones adicionales fuera del checklist estándar.</p>`;
+    // barras por línea
+    const maxL=Math.max(...Object.values(porLinea));
+    h+=`<div class="bars" style="margin-bottom:16px">`;
+    Object.entries(porLinea).sort((a,b)=>b[1]-a[1]).forEach(([l,n])=>{
+      h+=`<div class="bar alt"><div class="l"><span>${esc(l)}</span><b>${n}</b></div>
+        <div class="tr"><div class="fi" style="width:${Math.max(n*100/maxL,4)}%"></div></div></div>`;
+    });
+    h+=`</div>`;
+    // tabla línea · máquina · descripción
+    h+=`<div class="mtxw"><table class="mtx"><thead><tr>
+      <th class="rh">Línea</th><th class="rh">Máquina</th><th>ID</th><th class="rh">Descripción</th><th>Fotos</th></tr></thead><tbody>`;
+    hlAll.forEach(({equipo,linea,idx,hl})=>{
+      h+=`<tr><td class="rh">${esc(linea)}</td><td class="rh">${esc(equipo)}</td>
+        <td>HL.${idx+1}</td>
+        <td class="rh" style="white-space:normal;max-width:220px">${esc(hl.obs||"Sin descripción")}</td>
+        <td>${(hl.f||[]).length||"·"}</td></tr>`;
+    });
+    h+=`</tbody></table></div></div>`;
+  }
+
   v.innerHTML=h; conectaChips(v);
 }
 function conectaChips(v){
