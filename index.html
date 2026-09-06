@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12181f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Auditoría de tableros · ACL</title>
+<style>
+:root{
+  --ink:#12181f; --ink2:#1d2733; --slate:#5f6f80; --line:#dde3ea; --paper:#f2f4f7; --card:#fff;
+  --ok:#1f7a4d; --okbg:#e3f3ea; --bad:#b3261e; --badbg:#fbe7e5; --red:#c00000;
+  --na:#697585; --nabg:#eceff3; --focus:#0b62d6; --amber:#9a6700; --amberbg:#fdf3d7;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{overscroll-behavior-y:contain}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+     background:var(--paper);color:var(--ink);font-size:16px;line-height:1.45;
+     padding-bottom:calc(126px + var(--safe-b))}
+.num{font-variant-numeric:tabular-nums}
+.hide{display:none!important}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:0;background:none;color:inherit}
+
+header{position:sticky;top:0;z-index:50;background:var(--ink);color:#fff;
+       padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px}
+.hrow{display:flex;align-items:center;gap:10px;min-height:34px}
+.back{font-size:26px;line-height:1;padding:2px 8px 6px;margin-left:-8px;color:#cfd9e3}
+.htitle{flex:1;min-width:0}
+.htitle b{display:block;font-size:15.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.htitle span{display:block;font-size:12px;color:#9fb0c2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbar{height:4px;background:#2b3846;border-radius:2px;margin-top:9px;overflow:hidden}
+.pbar i{display:block;height:100%;background:#4a9d6e;width:0;transition:width .3s}
+
+.wrap{padding:14px 14px 0;max-width:820px;margin:0 auto}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:11px;
+      padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:13px;width:100%;text-align:left}
+.card:active{background:#f6f8fb}
+.card .body{flex:1;min-width:0}
+.card .t{font-weight:600;font-size:15.5px}
+.card .s{font-size:12.5px;color:var(--slate);margin-top:2px}
+.card .chev{color:#b3bfcc;font-size:21px}
+.ring{width:44px;height:44px;flex:none;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
+
+.sect{font-size:11.5px;font-weight:700;color:var(--slate);letter-spacing:.5px;margin:20px 2px 9px;text-transform:uppercase}
+
+.pt{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px 15px;margin-bottom:10px}
+.pt.no{border-color:#e8b4b0;background:#fffbfb}
+.pt.si{border-color:#bfe0cd}
+.pt-top{display:flex;gap:9px;margin-bottom:11px}
+.pt-id{font-size:12px;font-weight:700;color:var(--slate);flex:none;padding-top:2px;min-width:26px}
+.pt-tx{font-size:14.5px;line-height:1.4}
+.pt-nm{font-size:11.5px;color:var(--slate);margin-top:5px}
+.pt-cr{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:9px;margin-left:6px;vertical-align:1px}
+.cr-Alta{background:var(--badbg);color:var(--bad)}
+.cr-Media{background:var(--amberbg);color:var(--amber)}
+.cr-Baja{background:var(--nabg);color:var(--na)}
+.seg{display:flex;gap:7px}
+.seg button{flex:1;padding:13px 4px;border-radius:9px;border:1.5px solid var(--line);
+            background:var(--paper);font-size:14.5px;font-weight:600;color:var(--slate);min-height:48px}
+.seg button[aria-pressed="true"].y{background:var(--ok);border-color:var(--ok);color:#fff}
+.seg button[aria-pressed="true"].n{background:var(--bad);border-color:var(--bad);color:#fff}
+.seg button[aria-pressed="true"].a{background:var(--na);border-color:var(--na);color:#fff}
+.extra{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+label.fl{display:block;font-size:11.5px;font-weight:700;color:var(--slate);margin-bottom:5px;letter-spacing:.3px}
+textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;
+       font-family:inherit;font-size:15px;background:#fff;color:var(--ink);resize:vertical;min-height:74px}
+textarea:focus{outline:0;border-color:var(--focus)}
+textarea.req{border-color:#e8a49f;background:#fffafa}
+.hint{font-size:11.5px;color:var(--bad);margin-top:5px}
+.photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;align-items:flex-start}
+.ph{position:relative;width:74px;height:74px;border-radius:9px;overflow:hidden;border:1px solid var(--line)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .code{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.62);color:#fff;font-size:9.5px;text-align:center;padding:2px 0;font-weight:600}
+.ph .x{position:absolute;top:2px;right:2px;width:21px;height:21px;border-radius:50%;background:rgba(0,0,0,.62);color:#fff;font-size:13px;line-height:21px;text-align:center}
+.addph{width:74px;height:74px;border:1.5px dashed #b9c4d0;border-radius:9px;color:var(--slate);
+       font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.addph b{font-size:20px;font-weight:400;line-height:1}
+input[type=file]{display:none}
+
+/* barra de navegación inferior */
+.navwrap{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:1px solid var(--line);
+         padding-bottom:var(--safe-b)}
+.pager{display:flex;gap:9px;padding:8px 12px 0}
+.pager button{flex:1;padding:11px;border-radius:9px;background:var(--paper);color:var(--ink2);
+      font-weight:600;font-size:14px;text-align:center;min-height:44px;border:1px solid var(--line)}
+.pager button:disabled{opacity:.4}
+.tabs{display:flex}
+.tab{flex:1;padding:9px 4px 10px;text-align:center;color:var(--slate);font-size:11px;font-weight:600}
+.tab i{display:block;font-size:19px;font-style:normal;line-height:1.25}
+.tab.on{color:var(--focus)}
+
+/* panel */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 6px;text-align:center}
+.kpi .v{font-size:21px;font-weight:700}
+.kpi .k{font-size:10px;color:var(--slate);text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
+.kpi.ok .v{color:var(--ok)} .kpi.bad .v{color:var(--bad)} .kpi.na .v{color:var(--na)} .kpi.pd .v{color:var(--amber)}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.chip{background:var(--card);border:1px solid var(--line);padding:8px 15px;border-radius:20px;font-size:13.5px;color:var(--ink2)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+
+.box{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px;margin-bottom:12px}
+.box h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.box p{font-size:13px;color:var(--slate);margin-bottom:13px}
+
+/* barras horizontales: en pantalla de teléfono se leen mejor que las verticales */
+.bars{display:flex;flex-direction:column;gap:11px}
+.bar .l{font-size:13px;margin-bottom:4px;display:flex;justify-content:space-between;gap:10px}
+.bar .l b{font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+.bar .tr{background:var(--paper);height:17px;border-radius:3px;overflow:hidden}
+.bar .fi{height:100%;background:var(--red);border-radius:3px;min-width:3px;transition:width .35s}
+.bar.alt .fi{background:#8f1a1a}
+
+.lrow{margin-bottom:13px}
+.lhead{display:flex;justify-content:space-between;font-size:13.5px;gap:10px}
+.stack{display:flex;height:22px;border-radius:4px;overflow:hidden;margin:5px 0 3px}
+.sc{background:var(--ok)}.sn{background:var(--bad)}.sa{background:#aab6c2}.sp{background:#e0c56b}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--slate);margin-top:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+
+.mtxw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px}
+table.mtx{border-collapse:collapse;font-size:12px;min-width:100%}
+table.mtx th{background:var(--ink2);color:#fff;padding:7px 6px;font-weight:600;font-size:10.5px;text-align:center;white-space:nowrap}
+table.mtx th.rh{text-align:left;position:sticky;left:0;z-index:2}
+table.mtx td{padding:6px;text-align:center;border-bottom:1px solid var(--line)}
+table.mtx td.rh{text-align:left;font-weight:600;white-space:nowrap;background:#fff;position:sticky;left:0;
+                border-right:1px solid var(--line);font-size:11.5px}
+.cell{display:inline-block;min-width:24px;padding:2px 5px;border-radius:4px;font-weight:700}
+.c0{color:#c3ccd6}.c1{background:#fde4e2;color:#8f1f18}.c2{background:#f8b8b3;color:#7d1c16}
+.c3{background:#e8615a;color:#fff}.c4{background:var(--red);color:#fff}
+
+.nc{border-left:3px solid var(--bad);padding:9px 0 9px 12px;margin-bottom:12px;font-size:13.5px}
+.nc .h{font-weight:600}
+.nc .m{color:var(--slate);font-size:12px;margin-top:2px}
+.nc .o{margin-top:5px;background:var(--badbg);padding:7px 9px;border-radius:5px;font-size:12.5px}
+.find{border-left:3px solid var(--focus);padding:8px 0 8px 12px;margin-bottom:11px;font-size:13.5px}
+.find.crit{border-left-color:var(--bad)}
+.find.warn{border-left-color:#c9761c}
+
+.act{display:block;width:100%;padding:13px;border-radius:9px;background:var(--focus);color:#fff;
+     font-weight:600;font-size:15px;text-align:center;margin-bottom:8px;min-height:48px}
+.act.sec{background:var(--paper);color:var(--ink2);border:1px solid var(--line)}
+.act.dgr{background:var(--badbg);color:var(--bad);border:1px solid #e8b4b0}
+.act:disabled{opacity:.5}
+code{background:var(--paper);padding:1px 6px;border-radius:4px;font-size:12.5px}
+.warn{background:var(--amberbg);border:1px solid #e4cf8e;color:#6d4b00;padding:12px 14px;border-radius:9px;font-size:13.5px;margin-bottom:12px}
+.empty{text-align:center;color:var(--slate);font-size:13.5px;padding:26px 0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(134px + var(--safe-b));
+       background:var(--ink);color:#fff;padding:11px 18px;border-radius:22px;font-size:14px;
+       z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:88%;text-align:center}
+.toast.on{opacity:1}
+.foot{text-align:center;font-size:12px;color:var(--slate);padding:18px 0 8px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <button class="back hide" id="back" aria-label="Volver">‹</button>
+    <div class="htitle"><b id="hTitle">Auditoría de tableros</b><span id="hSub">Planta Arequipa</span></div>
+  </div>
+  <div class="pbar"><i id="pbar"></i></div>
+</header>
+
+<div class="wrap" id="view"></div>
+
+<div class="navwrap">
+  <div class="pager hide" id="pager">
+    <button id="prev">‹ Anterior</button>
+    <button id="next">Siguiente ›</button>
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-tab="auditar"><i>☑</i>Auditar</button>
+    <button class="tab"    data-tab="panel"><i>▤</i>Panel</button>
+    <button class="tab"    data-tab="exportar"><i>↓</i>Exportar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="cam" accept="image/*" capture="environment">
+<input type="file" id="filePl" accept=".xlsx">
+<input type="file" id="fileBk" accept=".json">
+
+<script>
+"use strict";
+const CATS = [
+ ["1. Condiciones Físicas y Seguridad","IEC 61439-1 · IEC 60529 · CNE Utilización 070",[
+   ["El tablero tiene cerradura o acceso restringido.","Alta"],
+   ["El tablero está hermético; las puertas cierran correctamente y garantizan la hermeticidad.","Media"],
+   ["Está libre de humedad, polvo y corrosión.","Alta"],
+   ["El tablero tiene una identificación visible y legible.","Media"],
+   ["Las cubiertas protectoras están presentes y seguras.","Alta"],
+   ["No hay presencia de objetos extraños o materiales inflamables dentro.","Alta"]]],
+ ["2. Ventilación y Temperatura","IEC 61439-1 §10.10 · IEC 60890",[
+   ["Tiene rejillas, ventiladores o extractores funcionales.","Media"],
+   ["Los filtros están limpios y en buen estado.","Baja"],
+   ["No hay evidencia de calentamiento excesivo o manchas por sobretemperatura.","Alta"]]],
+ ["3. Organización y Cableado","IEC 60364-5-52 · CNE Utilización 050",[
+   ["Los cables están peinados y sujetos con canaletas o abrazaderas.","Baja"],
+   ["Los colores de los cables siguen norma (tierra, neutro, fases).","Media"],
+   ["No hay cables sueltos, pelados o mal conectados.","Alta"],
+   ["Se evita el cruce de cables de fuerza y señal sin protección.","Media"]]],
+ ["4. Etiquetado y Documentación","IEC 61439-1 §6 · IEC 81346 · IEC 60204-1",[
+   ["Todos los interruptores, contactores, relés y cables están etiquetados.","Media"],
+   ["Hay diagrama unifilar actualizado en el tablero o cerca.","Media"],
+   ["Los nombres coinciden con los planos eléctricos.","Media"]]],
+ ["5. Componentes Eléctricos","IEC 61439-1 §10.6 · IEC 60947",[
+   ["Revisar bornes: deben estar firmes y sin sulfatación.","Alta"],
+   ["Revisar relevadores, PLC, fusibles y temporizadores: funcionamiento correcto y señalización adecuada.","Alta"]]],
+ ["6. Puesta a Tierra y Protección","IEC 60364-4-41 · IEC 60364-5-54 · CNE Utilización 060",[
+   ["Verificar la conexión a tierra del tablero y estructuras metálicas.","Alta"],
+   ["Comprobar la presencia de protección diferencial si aplica.","Alta"],
+   ["Confirmar que no se ha puenteado protección eléctrica sin justificación técnica.","Alta"]]],
+ ["7. Mantenimiento y Accesibilidad","NFPA 70E §110 · IEC 60364-1 §132 · CNE Utilización 070",[
+   ["Hay espacio suficiente para intervenir el tablero con seguridad.","Media"],
+   ["La puerta abre correctamente y no obstruye el paso.","Media"],
+   ["Tiene registro de mantenimiento reciente o programado.","Baja"]]],
+];
+
+const LINEAS = [
+ ["Vidrio",[
+   ["Tableros Eléctricos Llenadora","T.E. LLENADORA"],
+   ["Tableros Eléctricos llenadora HMI","T.E. LLENADORA HMI"],
+   ["Tableros Eléctricos lavadora Botellas","T.E. LAVADORA BOT"],
+   ["Tableros Eléctricos Paletizadora","T.E. PALETIZADORA"],
+   ["Tableros Eléctricos despaletizadora","T.E. DESPALETIZADORA"],
+   ["Tableros Eléctricos Descapsuladora","T.E. DESCAPSULADORA"],
+   ["Tableros Eléctricos Desencajonadora","T.E. DESENCAJONADORA"],
+   ["Tableros Eléctricos Encajonadora","T.E. ENCAJONADORA"],
+   ["Tableros Eléctricos Etiquetadora","T.E. ETIQUETADORA"],
+   ["Tableros Eléctricos Mixer","T.E. MIXER"],
+   ["Tableros Eléctricos transporte Botellas y cajas","T.E. TRANSPORT BOT Y CAJAS"],
+   ["Tableros Eléctricos transporte de palets","T.E. TRANSPORT PALETS"]]],
+ ["Zegla L1",[
+   ["Tableros Eléctricos Llenadora","T.E. LLENADORA"],
+   ["Tableros Eléctricos Mixer","T.E. MIXER"],
+   ["Tableros Eléctricos Robot paletizador Fanuc","T.E. ROBOT PALETIZADOR"],
+   ["Tableros Eléctricos Thermo Encogible (parte control)","T.E. THERMOENCOGIBLE"],
+   ["Tableros Eléctricos Thermo Encogible (parte Horno)","T.E. TERMO - HORNO"],
+   ["Tableros Eléctricos Envolvedor","T.E. ENVOLVEDOR"],
+   ["Tableros Eléctricos transporte Botellas y Paquetes","T.E. TRANSPORT BOT"],
+   ["Tableros Eléctricos Tunel Neumatico","T.E. TUNEL NEUMATICO"]]],
+ ["Combi L3",[
+   ["Tableros Eléctricos Llenadora","T.E. LLENADORA"],
+   ["Tableros Eléctricos Mixer","T.E. MIXER"],
+   ["Tableros Eléctricos Etiquetadora","T.E. ETIQUETADORA"],
+   ["Tableros Eléctricos Empacadora(cermex)","T.E. EMPACADORA"],
+   ["Tableros Eléctricos Paletizador","T.E. PALETIZADORA"],
+   ["Tableros Eléctricos Envolvedor","T.E. ENVOLVEDOR"],
+   ["Tableros Eléctricos transporte Botellas y Paquetes","T.E. TRANSPORT BOT"]]],
+];
+
+// Se generan las 648 filas en el mismo orden que la hoja Checklist del Excel.
+const ROWS = [];
+LINEAS.forEach(([linea,maqs])=>maqs.forEach(([maquina,equipo],mi)=>{
+  CATS.forEach(([cat,norma,puntos])=>{
+    const nc = cat.split(".")[0];
+    puntos.forEach(([texto,crit],pi)=>{
+      ROWS.push({key:`${linea}|${mi}|${nc}.${pi+1}`, linea, maquina, equipo,
+                 tabKey:`${linea}|${mi}`, cat, norma, id:`${nc}.${pi+1}`, texto, crit});
+    });
+  });
+}));
+const TABLEROS = [];
+LINEAS.forEach(([linea,maqs])=>maqs.forEach(([maquina,equipo],mi)=>
+  TABLEROS.push({key:`${linea}|${mi}`, linea, maquina, equipo})));
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   ALMACENAMIENTO
+   IndexedDB. Todo se guarda al instante: si el teléfono se bloquea, se
+   queda sin batería o el navegador cierra la pestaña, la auditoría sigue
+   ahí al volver a abrir.
+   ══════════════════════════════════════════════════════════════════════ */
+const DB_NAME="auditoria_acl", STORE="datos";
+let db=null, sinDisco=false;
+
+function abrirDB(){
+  return new Promise(res=>{
+    let rq;
+    try{ rq=indexedDB.open(DB_NAME,1); }catch(e){ sinDisco=true; return res(); }
+    rq.onupgradeneeded = e => e.target.result.createObjectStore(STORE);
+    rq.onsuccess = e => { db=e.target.result; res(); };
+    rq.onerror   = () => { sinDisco=true; res(); };
+    setTimeout(()=>{ if(!db){ sinDisco=true; res(); } }, 2500);
+  });
+}
+// Devuelve false si la escritura falla (típicamente por falta de espacio),
+// para poder avisar en vez de dar por guardado algo que no lo está.
+function put(k,v){
+  if(!db) return Promise.resolve(true);
+  return new Promise(res=>{
+    try{
+      const t=db.transaction(STORE,"readwrite");
+      t.objectStore(STORE).put(v,k);
+      t.oncomplete=()=>res(true);
+      t.onerror=()=>res(false);
+      t.onabort=()=>res(false);
+    }catch(e){ res(false); }
+  });
+}
+function getAll(){
+  if(!db) return Promise.resolve({});
+  return new Promise(res=>{
+    const out={};
+    try{
+      const t=db.transaction(STORE,"readonly"), rq=t.objectStore(STORE).openCursor();
+      rq.onsuccess=e=>{ const c=e.target.result; if(c){ out[c.key]=c.value; c.continue(); } else res(out); };
+      rq.onerror=()=>res({});
+    }catch(e){ res({}); }
+  });
+}
+function del(k){
+  if(!db) return Promise.resolve();
+  return new Promise(res=>{
+    try{ const t=db.transaction(STORE,"readwrite"); t.objectStore(STORE).delete(k);
+         t.oncomplete=res; t.onerror=res; }catch(e){ res(); }
+  });
+}
+
+// R[key] = {e:"Sí"|"No"|"No aplica", o:"observación", f:["F-001",…]}
+let R = {};
+let FOTOS = {};          // "F-001" -> {data, key, linea, equipo, id, fecha}
+let PLANTILLA = null;    // {nombre, datos:ArrayBuffer} del Excel base
+const guardaResp = () => put("respuestas", R);
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   ESCRITURA DIRECTA EN EL EXCEL
+   Un .xlsx es un ZIP de archivos XML. En vez de regenerar el libro entero
+   (lo que borra estilos, listas desplegables y anchos de columna), aquí se
+   reemplaza únicamente el XML de la hoja «Checklist»; el resto de entradas
+   se copian con sus bytes comprimidos originales, así que no pueden
+   degradarse. Se usan las APIs de compresión del navegador: sin librerías
+   externas, funciona sin señal.
+   ══════════════════════════════════════════════════════════════════════ */
+function crc32(u8){
+  let t = crc32.t;
+  if(!t){
+    t = crc32.t = new Int32Array(256);
+    for(let n=0;n<256;n++){ let c=n;
+      for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1;
+      t[n]=c; }
+  }
+  let c=-1;
+  for(let i=0;i<u8.length;i++) c = (c>>>8) ^ t[(c^u8[i])&0xFF];
+  return (c^-1)>>>0;
+}
+async function inflarRaw(u8){
+  if(typeof DecompressionStream === "undefined") throw new Error("sin-descompresion");
+  const s = new Blob([u8]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+async function deflarRaw(u8){
+  if(typeof CompressionStream === "undefined") return null;   // se guardará sin comprimir
+  const s = new Blob([u8]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+
+function leerZip(ab){
+  const dv = new DataView(ab), u8 = new Uint8Array(ab);
+  let eocd = -1;
+  for(let i=u8.length-22; i>=0 && i>u8.length-66000; i--){
+    if(dv.getUint32(i,true) === 0x06054b50){ eocd=i; break; }
+  }
+  if(eocd < 0) throw new Error("El archivo no es un .xlsx válido.");
+  const n = dv.getUint16(eocd+10,true);
+  let off = dv.getUint32(eocd+16,true);
+  const dec = new TextDecoder();
+  const entradas = [];
+  for(let i=0;i<n;i++){
+    if(dv.getUint32(off,true) !== 0x02014b50) throw new Error("Directorio del archivo dañado.");
+    const metodo = dv.getUint16(off+10,true), crc = dv.getUint32(off+16,true);
+    const compSz = dv.getUint32(off+20,true), rawSz = dv.getUint32(off+24,true);
+    const nLen = dv.getUint16(off+28,true), eLen = dv.getUint16(off+30,true), cLen = dv.getUint16(off+32,true);
+    const lh = dv.getUint32(off+42,true);
+    const nombre = dec.decode(u8.subarray(off+46, off+46+nLen));
+    const ini = lh + 30 + dv.getUint16(lh+26,true) + dv.getUint16(lh+28,true);
+    entradas.push({nombre, metodo, crc, rawSz, comp: u8.subarray(ini, ini+compSz)});
+    off += 46 + nLen + eLen + cLen;
+  }
+  return entradas;
+}
+
+function escribirZip(entradas){
+  const enc = new TextEncoder();
+  const partes = [], centrales = [];
+  let off = 0;
+  for(const e of entradas){
+    const nom = enc.encode(e.nombre);
+    const lh = new Uint8Array(30), dl = new DataView(lh.buffer);
+    dl.setUint32(0,0x04034b50,true); dl.setUint16(4,20,true);
+    dl.setUint16(8,e.metodo,true);   dl.setUint32(14,e.crc,true);
+    dl.setUint32(18,e.comp.length,true); dl.setUint32(22,e.rawSz,true);
+    dl.setUint16(26,nom.length,true);
+    partes.push(lh, nom, e.comp);
+
+    const ch = new Uint8Array(46), dc = new DataView(ch.buffer);
+    dc.setUint32(0,0x02014b50,true); dc.setUint16(4,20,true); dc.setUint16(6,20,true);
+    dc.setUint16(10,e.metodo,true);  dc.setUint32(16,e.crc,true);
+    dc.setUint32(20,e.comp.length,true); dc.setUint32(24,e.rawSz,true);
+    dc.setUint16(28,nom.length,true); dc.setUint32(42,off,true);
+    centrales.push(ch, nom);
+    off += 30 + nom.length + e.comp.length;
+  }
+  let cdLen = 0; centrales.forEach(p=>cdLen += p.length);
+  const eocd = new Uint8Array(22), de = new DataView(eocd.buffer);
+  de.setUint32(0,0x06054b50,true);
+  de.setUint16(8,entradas.length,true); de.setUint16(10,entradas.length,true);
+  de.setUint32(12,cdLen,true);          de.setUint32(16,off,true);
+  return new Blob(partes.concat(centrales,[eocd]), {type:
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+
+const escXml = s => String(s==null?"":s)
+  .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+// Una sola pasada sobre el XML: con 648 filas, reemplazar celda por celda
+// sería demasiado lento en un teléfono.
+function escribirCeldas(xml, valores){
+  const puestas = new Set();
+  xml = xml.replace(/<c r="([A-Z]+\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, (todo, ref, attrs)=>{
+    if(!(ref in valores)) return todo;
+    puestas.add(ref);
+    const s = /\bs="(\d+)"/.exec(attrs);
+    const est = s ? ` s="${s[1]}"` : "";
+    const v = valores[ref];
+    return (v==="" || v==null)
+      ? `<c r="${ref}"${est}/>`
+      : `<c r="${ref}"${est} t="inlineStr"><is><t xml:space="preserve">${escXml(v)}</t></is></c>`;
+  });
+  // celdas que no existían en el XML: se insertan al final de su fila
+  const faltan = Object.keys(valores).filter(r=>!puestas.has(r) && valores[r]);
+  if(faltan.length){
+    const porFila = {};
+    faltan.forEach(ref=>{ const f = ref.replace(/\D/g,""); (porFila[f]=porFila[f]||[]).push(ref); });
+    for(const [fila, refs] of Object.entries(porFila)){
+      const re = new RegExp(`(<row[^>]*r="${fila}"[^>]*>)([\\s\\S]*?)(</row>)`);
+      const m = re.exec(xml);
+      if(!m) continue;
+      const add = refs.map(ref=>
+        `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${escXml(valores[ref])}</t></is></c>`).join("");
+      xml = xml.slice(0,m.index) + m[1] + m[2] + add + m[3] + xml.slice(m.index + m[0].length);
+    }
+  }
+  return xml;
+}
+
+async function generarExcel(plantillaAB){
+  const entradas = leerZip(plantillaAB);
+  const dec = new TextDecoder(), enc = new TextEncoder();
+  const crudo = async nombre => {
+    const e = entradas.find(x=>x.nombre===nombre);
+    if(!e) throw new Error("Falta " + nombre + " dentro del archivo.");
+    return dec.decode(e.metodo===0 ? e.comp : await inflarRaw(e.comp));
+  };
+
+  // localizar el XML de la hoja «Checklist» siguiendo las relaciones del libro
+  const wbx0  = await crudo("xl/workbook.xml");
+  const rels  = await crudo("xl/_rels/workbook.xml.rels");
+  const ms = /<sheet[^>]*name="Checklist"[^>]*?r:id="([^"]+)"/.exec(wbx0)
+          || /<sheet[^>]*r:id="([^"]+)"[^>]*?name="Checklist"/.exec(wbx0);
+  if(!ms) throw new Error("El archivo no tiene una hoja llamada «Checklist». ¿Es la plantilla correcta?");
+  const mr = new RegExp(`Id="${ms[1]}"[^>]*Target="([^"]+)"`).exec(rels);
+  if(!mr) throw new Error("No se pudo ubicar la hoja Checklist dentro del archivo.");
+  const ruta = "xl/" + mr[1].replace(/^\/?xl\//,"");
+
+  // K = Cumple, L = Observación, M = Evidencia; fila 4 en adelante,
+  // en el mismo orden en que se generaron ROWS.
+  const valores = {};
+  ROWS.forEach((r,i)=>{
+    const d = R[r.key] || {}, f = 4 + i;
+    valores["K"+f] = d.e || "";
+    valores["L"+f] = d.o || "";
+    valores["M"+f] = (d.f||[]).join(", ");
+  });
+  const hoja = escribirCeldas(await crudo(ruta), valores);
+
+  // que Excel recalcule el resumen al abrir
+  let wbx = /<calcPr/.test(wbx0)
+    ? wbx0.replace(/<calcPr[^>]*\/>/, '<calcPr calcId="191029" fullCalcOnLoad="1"/>')
+    : wbx0.replace("</workbook>", '<calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>');
+
+  const nuevas = [];
+  for(const e of entradas){
+    let bytes = null;
+    if(e.nombre === ruta)             bytes = enc.encode(hoja);
+    if(e.nombre === "xl/workbook.xml") bytes = enc.encode(wbx);
+    if(!bytes){ nuevas.push(e); continue; }        // intacta
+    const comp = await deflarRaw(bytes);
+    nuevas.push(comp
+      ? {nombre:e.nombre, metodo:8, crc:crc32(bytes), rawSz:bytes.length, comp}
+      : {nombre:e.nombre, metodo:0, crc:crc32(bytes), rawSz:bytes.length, comp:bytes});
+  }
+  return escribirZip(nuevas);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   INTERFAZ
+   Tres pestañas: Auditar (recorrido tablero por tablero), Panel (lo que va
+   saliendo, con gráficos) y Exportar (Excel, fotos, respaldo).
+   ══════════════════════════════════════════════════════════════════════ */
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+let tToast;
+function toast(t){ const n=$("#toast"); n.textContent=t; n.classList.add("on");
+  clearTimeout(tToast); tToast=setTimeout(()=>n.classList.remove("on"),2200); }
+
+const estadoDe = k => (R[k]&&R[k].e)||"";
+const EST = {SI:"Sí", NO:"No", NA:"No aplica"};
+
+function cuenta(rows){
+  let si=0,no=0,na=0;
+  rows.forEach(r=>{ const e=estadoDe(r.key);
+    if(e===EST.SI)si++; else if(e===EST.NO)no++; else if(e===EST.NA)na++; });
+  return {si,no,na,pend:rows.length-si-no-na,total:rows.length};
+}
+const pctDe = c => (c.si+c.no) ? Math.round(c.si*100/(c.si+c.no)) : null;
+function progresoTablero(tk){
+  const p=ROWS.filter(r=>r.tabKey===tk), c=cuenta(p);
+  return {hechos:c.si+c.no+c.na, total:p.length, nc:c.no,
+          pct:Math.round((c.si+c.no+c.na)*100/p.length)};
+}
+function rank(rows,key,max=9){
+  const m=new Map();
+  rows.forEach(r=>{ if(r[key]) m.set(r[key],(m.get(r[key])||0)+1); });
+  return [...m].sort((a,b)=>b[1]-a[1]).slice(0,max);
+}
+
+/* ---------------------------- navegación ---------------------------- */
+let tab="auditar";
+let vista={n:"lineas"};
+let idxTablero=0;
+let filtroLinea="";
+
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  tab=b.dataset.tab;
+  if(tab==="auditar" && vista.n!=="punto") vista={n:"lineas"};
+  pinta(); window.scrollTo(0,0);
+});
+$("#back").onclick=()=>{
+  if(vista.n==="tableros") vista={n:"lineas"};
+  else if(vista.n==="punto") vista={n:"tableros",linea:TABLEROS[idxTablero].linea};
+  pinta(); window.scrollTo(0,0);
+};
+$("#prev").onclick=()=>{ if(idxTablero>0){ idxTablero--; pinta(); window.scrollTo(0,0);} };
+$("#next").onclick=()=>{ if(idxTablero<TABLEROS.length-1){ idxTablero++; pinta(); window.scrollTo(0,0);} };
+
+function pinta(){
+  const c=cuenta(ROWS);
+  $("#pbar").style.width = ((c.si+c.no+c.na)*100/c.total)+"%";
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on", b.dataset.tab===tab));
+  const enPunto = tab==="auditar" && vista.n==="punto";
+  $("#pager").classList.toggle("hide", !enPunto);
+  $("#back").classList.toggle("hide", tab!=="auditar" || vista.n==="lineas");
+  document.body.style.paddingBottom = enPunto
+    ? "calc(126px + var(--safe-b))" : "calc(74px + var(--safe-b))";
+
+  const v=$("#view");
+  if(tab==="panel")    return vistaPanel(v);
+  if(tab==="exportar") return vistaExportar(v);
+  if(vista.n==="lineas")   return vistaLineas(v);
+  if(vista.n==="tableros") return vistaTableros(v, vista.linea);
+  if(vista.n==="punto")    return vistaPunto(v);
+}
+
+function anillo(pct, nc){
+  const r=19, C=2*Math.PI*r;
+  const col = nc>0 ? "#b3261e" : pct===100 ? "#1f7a4d" : "#0b62d6";
+  return `<div class="ring"><svg width="44" height="44">
+    <circle cx="22" cy="22" r="${r}" fill="none" stroke="#e6ebf1" stroke-width="4"/>
+    <circle cx="22" cy="22" r="${r}" fill="none" stroke="${col}" stroke-width="4"
+      stroke-dasharray="${C}" stroke-dashoffset="${C*(1-pct/100)}" stroke-linecap="round"/>
+  </svg><div class="lab num" style="color:${col}">${pct}%</div></div>`;
+}
+
+/* ---------------------------- auditar ---------------------------- */
+function vistaLineas(v){
+  $("#hTitle").textContent="Auditoría de tableros";
+  $("#hSub").textContent="Planta Arequipa · toque una línea";
+  let h="";
+  if(sinDisco) h+=`<div class="warn"><b>Sin guardado automático.</b>
+    El teléfono abrió este archivo como <code>content://</code>, y en ese modo el navegador no permite
+    almacenar datos. Lo auditado vive sólo mientras la pestaña siga abierta.
+    <button class="act" id="bkYa" style="margin-top:11px">Descargar copia de seguridad ahora</button>
+    <span style="font-size:12.5px">Repítalo cada tanto. Para trabajar sin esta limitación, abra el archivo
+    desde una dirección <code>https://</code> (GitHub Pages) en lugar de desde la carpeta de descargas.</span></div>`;
+  LINEAS.forEach(([linea,maqs])=>{
+    const pts=ROWS.filter(r=>r.linea===linea), c=cuenta(pts);
+    const pct=Math.round((c.si+c.no+c.na)*100/pts.length);
+    h+=`<button class="card" data-linea="${esc(linea)}">${anillo(pct,c.no)}
+      <div class="body"><div class="t">${esc(linea)}</div>
+        <div class="s">${maqs.length} tableros · ${c.si+c.no+c.na} de ${pts.length} puntos${c.no?` · ${c.no} no cumple`:""}</div></div>
+      <div class="chev">›</div></button>`;
+  });
+  h+=`<div class="foot">Los datos quedan en este teléfono.<br>Nada se envía a ningún servidor.</div>`;
+  v.innerHTML=h;
+  const bk=$("#bkYa"); if(bk) bk.onclick=exportarBackup;
+  v.querySelectorAll("[data-linea]").forEach(b=>b.onclick=()=>{
+    vista={n:"tableros",linea:b.dataset.linea}; pinta(); window.scrollTo(0,0); });
+}
+
+function vistaTableros(v, linea){
+  $("#hTitle").textContent=linea;
+  $("#hSub").textContent="Toque un tablero para auditarlo";
+  let h="";
+  TABLEROS.forEach((t,i)=>{
+    if(t.linea!==linea) return;
+    const p=progresoTablero(t.key);
+    h+=`<button class="card" data-i="${i}">${anillo(p.pct,p.nc)}
+      <div class="body"><div class="t">${esc(t.equipo)}</div>
+        <div class="s">${p.hechos} de ${p.total} puntos${p.nc?` · ${p.nc} no cumple`:""}</div></div>
+      <div class="chev">›</div></button>`;
+  });
+  v.innerHTML=h;
+  v.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
+    idxTablero=+b.dataset.i; vista={n:"punto"}; pinta(); window.scrollTo(0,0); });
+}
+
+function vistaPunto(v){
+  const t=TABLEROS[idxTablero], p=progresoTablero(t.key);
+  $("#hTitle").textContent=t.equipo;
+  $("#hSub").textContent=`${t.linea} · ${p.hechos}/${p.total} puntos`;
+  $("#prev").disabled = idxTablero===0;
+  $("#next").disabled = idxTablero===TABLEROS.length-1;
+  $("#next").textContent = idxTablero===TABLEROS.length-1 ? "Último" : "Siguiente ›";
+
+  let h="", catAct="";
+  ROWS.filter(r=>r.tabKey===t.key).forEach(r=>{
+    if(r.cat!==catAct){ catAct=r.cat; h+=`<div class="sect">${esc(r.cat)}</div>`; }
+    const st=estadoDe(r.key), d=R[r.key]||{};
+    const cls = st===EST.NO?"no" : st===EST.SI?"si" : "";
+    const fotos=(d.f||[]).map(c=>FOTOS[c]?`<div class="ph" data-del="${c}" data-k="${esc(r.key)}">
+        <img src="${FOTOS[c].data}" alt=""><div class="code">${c}</div><div class="x">×</div></div>`:"").join("");
+    h+=`<div class="pt ${cls}" data-row="${esc(r.key)}">
+      <div class="pt-top"><div class="pt-id num">${r.id}</div>
+        <div><div class="pt-tx">${esc(r.texto)}<span class="pt-cr cr-${r.crit}">${r.crit}</span></div>
+             <div class="pt-nm">${esc(r.norma)}</div></div></div>
+      <div class="seg">
+        <button class="y" data-set="${EST.SI}" aria-pressed="${st===EST.SI}">Cumple</button>
+        <button class="n" data-set="${EST.NO}" aria-pressed="${st===EST.NO}">No cumple</button>
+        <button class="a" data-set="${EST.NA}" aria-pressed="${st===EST.NA}">N/A</button>
+      </div>
+      <div class="extra ${st?"":"hide"}">
+        <label class="fl">Observación${st===EST.NO?" (obligatoria)":""}</label>
+        <textarea data-obs placeholder="${st===EST.NO?"Describa el hallazgo concreto…":"Opcional"}"
+          class="${st===EST.NO&&!(d.o||"").trim()?"req":""}">${esc(d.o||"")}</textarea>
+        ${st===EST.NO&&!(d.o||"").trim()?'<div class="hint">Sin descripción del hallazgo no se puede abrir la acción correctiva.</div>':""}
+        <div class="photos">${fotos}<button class="addph" data-foto><b>+</b>Foto</button></div>
+      </div></div>`;
+  });
+  v.innerHTML=h;
+
+  v.querySelectorAll(".pt").forEach(nodo=>{
+    const key=nodo.dataset.row;
+    nodo.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{
+      const val=b.dataset.set;
+      R[key]=R[key]||{f:[]};
+      R[key].e = R[key].e===val ? "" : val;     // volver a tocar lo desmarca
+      guardaResp(); avisaRespaldo(); pinta();
+    });
+    const ta=nodo.querySelector("[data-obs]");
+    if(ta){
+      ta.oninput=()=>{ R[key]=R[key]||{f:[]}; R[key].o=ta.value; guardaResp(); };
+      ta.onblur =()=>{ if(estadoDe(key)===EST.NO) pinta(); };
+    }
+    const bf=nodo.querySelector("[data-foto]");
+    if(bf) bf.onclick=()=>{ fotoPara=key; $("#cam").click(); };
+    nodo.querySelectorAll("[data-del]").forEach(ph=>ph.onclick=()=>{
+      const c=ph.dataset.del;
+      if(!confirm(`¿Eliminar la foto ${c}?`)) return;
+      delete FOTOS[c]; del("foto:"+c);
+      const k=ph.dataset.k;
+      if(R[k]) R[k].f=(R[k].f||[]).filter(x=>x!==c);
+      guardaResp(); pinta();
+    });
+  });
+}
+
+// Sin almacenamiento no hay red de seguridad: se recuerda descargar la copia.
+let ultimoAviso=0;
+function avisaRespaldo(){
+  if(!sinDisco) return;
+  const c=cuenta(ROWS), hechos=c.si+c.no+c.na;
+  if(hechos>0 && hechos%25===0 && hechos!==ultimoAviso){
+    ultimoAviso=hechos;
+    toast(`${hechos} puntos sin respaldo · descargue una copia`);
+  }
+}
+
+/* ---------------------------- fotos ---------------------------- */
+let fotoPara=null;
+function comprimir(file){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader(); fr.onerror=rej;
+    fr.onload=()=>{
+      const img=new Image(); img.onerror=rej;
+      img.onload=()=>{
+        const MAX=1280; let w=img.width, h=img.height;
+        if(w>MAX||h>MAX){ const k=MAX/Math.max(w,h); w=Math.round(w*k); h=Math.round(h*k); }
+        const c=document.createElement("canvas"); c.width=w; c.height=h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        res(c.toDataURL("image/jpeg",0.7));
+      };
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function nuevoCodigo(){
+  let n=1; while(FOTOS["F-"+String(n).padStart(3,"0")]) n++;
+  return "F-"+String(n).padStart(3,"0");
+}
+$("#cam").addEventListener("change", async e=>{
+  const f=e.target.files[0]; e.target.value="";
+  if(!f||!fotoPara) return;
+  toast("Procesando foto…");
+  try{
+    const data=await comprimir(f), cod=nuevoCodigo();
+    const r=ROWS.find(x=>x.key===fotoPara);
+    FOTOS[cod]={data, key:fotoPara, linea:r.linea, equipo:r.equipo, id:r.id,
+                punto:r.texto, fecha:new Date().toISOString()};
+    const ok = await put("foto:"+cod, FOTOS[cod]);
+    if(ok === false){
+      delete FOTOS[cod];
+      toast("No se pudo guardar la foto: sin espacio. Descargue la copia y libere memoria.");
+      fotoPara=null; return;
+    }
+    R[fotoPara]=R[fotoPara]||{f:[]};
+    R[fotoPara].f=(R[fotoPara].f||[]).concat(cod);
+    await guardaResp();
+    toast(cod+" adjuntada"); pinta();
+  }catch(err){ toast("No se pudo procesar la foto"); }
+  fotoPara=null;
+});
+
+/* ---------------------------- panel ---------------------------- */
+function vistaPanel(v){
+  $("#hTitle").textContent="Panel de resultados";
+  $("#hSub").textContent = filtroLinea ? "Línea "+filtroLinea : "Todas las líneas";
+
+  const base = filtroLinea ? ROWS.filter(r=>r.linea===filtroLinea) : ROWS;
+  const c = cuenta(base), p = pctDe(c);
+  const nc = base.filter(r=>estadoDe(r.key)===EST.NO);
+
+  let h=`<div class="chips">
+    <button class="chip ${filtroLinea?"":"on"}" data-f="">Todas</button>
+    ${LINEAS.map(([l])=>`<button class="chip ${filtroLinea===l?"on":""}" data-f="${esc(l)}">${esc(l)}</button>`).join("")}
+  </div>
+  <div class="kpis">
+    <div class="kpi ok"><div class="v num">${c.si}</div><div class="k">Cumple</div></div>
+    <div class="kpi bad"><div class="v num">${c.no}</div><div class="k">No cumple</div></div>
+    <div class="kpi na"><div class="v num">${c.na}</div><div class="k">N/A</div></div>
+    <div class="kpi pd"><div class="v num">${c.pend}</div><div class="k">Pendiente</div></div>
+  </div>`;
+
+  if(c.si+c.no===0){
+    h+=`<div class="box"><div class="empty">Todavía no hay puntos evaluados.<br>
+      Empiece por la pestaña <b>Auditar</b>.</div></div>`;
+    v.innerHTML=h; conectaChips(v); return;
+  }
+
+  h+=`<div class="box"><h3>Cumplimiento ${p}%</h3>
+    <p>Sobre ${c.si+c.no} puntos evaluados. Los «no aplica» y los pendientes quedan fuera del cálculo.</p>`;
+  LINEAS.forEach(([linea])=>{
+    if(filtroLinea && linea!==filtroLinea) return;
+    const cc=cuenta(ROWS.filter(r=>r.linea===linea)), pp=pctDe(cc);
+    const w=n=>(cc.total?n*100/cc.total:0).toFixed(2)+"%";
+    h+=`<div class="lrow">
+      <div class="lhead"><b>${esc(linea)}</b>
+        <span class="num" style="color:var(--slate)">${pp===null?"sin evaluar":pp+"% · "+cc.no+" NC"}</span></div>
+      <div class="stack"><span class="sc" style="width:${w(cc.si)}"></span><span class="sn" style="width:${w(cc.no)}"></span>
+        <span class="sa" style="width:${w(cc.na)}"></span><span class="sp" style="width:${w(cc.pend)}"></span></div>
+    </div>`;
+  });
+  h+=`<div class="legend"><span><i class="sc"></i>Cumple</span><span><i class="sn"></i>No cumple</span>
+      <span><i class="sa"></i>N/A</span><span><i class="sp"></i>Pendiente</span></div></div>`;
+
+  h+=`<div class="box"><h3>Categorías más críticas</h3>
+    <p>No conformidades agrupadas por categoría del checklist.</p>
+    ${barras(rank(nc,"cat"),"no conformidades")}</div>`;
+
+  h+=`<div class="box"><h3>Equipos con más observaciones</h3>
+    <p>Tableros con mayor número de puntos incumplidos.</p>
+    ${barras(rank(nc,"equipo"),"no conformidades",true)}</div>`;
+
+  h+=`<div class="box"><h3>Matriz equipo × categoría</h3>
+    <p>Número de puntos que no cumplen en cada cruce. Deslice la tabla para ver todas las categorías.</p>
+    ${matriz(base)}</div>`;
+
+  h+=`<div class="box"><h3>Lectura de lo auditado</h3>${hallazgos(base,nc,c,p)}</div>`;
+
+  if(nc.length){
+    h+=`<div class="box"><h3>No conformidades (${nc.length})</h3><p>Ordenadas por criticidad.</p>`;
+    const ord={Alta:0,Media:1,Baja:2};
+    [...nc].sort((a,b)=>ord[a.crit]-ord[b.crit]).slice(0,60).forEach(r=>{
+      const d=R[r.key]||{};
+      h+=`<div class="nc"><div class="h">${esc(r.equipo)} · ${r.id}
+            <span class="pt-cr cr-${r.crit}">${r.crit}</span></div>
+        <div class="m">${esc(r.linea)} · ${esc(r.cat)}</div>
+        <div class="m">${esc(r.texto)}</div>
+        ${d.o?`<div class="o">${esc(d.o)}</div>`:'<div class="o">Sin observación registrada</div>'}
+        ${(d.f||[]).length?`<div class="m">Evidencia: ${(d.f||[]).join(", ")}</div>`:""}</div>`;
+    });
+    if(nc.length>60) h+=`<p style="margin:0">Se muestran las 60 primeras. El Excel las incluye todas.</p>`;
+    h+=`</div>`;
+  }
+  v.innerHTML=h; conectaChips(v);
+}
+function conectaChips(v){
+  v.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{
+    filtroLinea=b.dataset.f; pinta(); window.scrollTo(0,0); });
+}
+function barras(data, noun, alt){
+  if(!data.length) return `<div class="empty">Sin ${esc(noun)} con este filtro.</div>`;
+  const max=data[0][1];
+  return `<div class="bars">`+data.map(([k,v])=>`<div class="bar${alt?" alt":""}">
+      <div class="l"><span>${esc(k)}</span><b>${v}</b></div>
+      <div class="tr"><div class="fi" style="width:${Math.max(v*100/max,3)}%"></div></div></div>`).join("")+`</div>`;
+}
+function matriz(base){
+  const ev = base.filter(r=>estadoDe(r.key));      // sólo lo ya evaluado
+  if(!ev.length) return `<div class="empty">Aún no hay puntos evaluados.</div>`;
+  const cats=[...new Set(ev.map(r=>r.cat))].sort((a,b)=>parseInt(a)-parseInt(b));
+  const eqs=[...new Set(ev.map(r=>r.equipo))]
+    .sort((a,b)=>ev.filter(r=>r.equipo===b&&estadoDe(r.key)===EST.NO).length
+               - ev.filter(r=>r.equipo===a&&estadoDe(r.key)===EST.NO).length || a.localeCompare(b));
+  let h=`<div class="mtxw"><table class="mtx"><thead><tr><th class="rh">Equipo</th>`;
+  cats.forEach(c=>h+=`<th title="${esc(c)}">${c.split(".")[0]}</th>`);
+  h+=`<th>Σ</th></tr></thead><tbody>`;
+  eqs.forEach(e=>{
+    const fila=ev.filter(r=>r.equipo===e); let tot=0;
+    let tds="";
+    cats.forEach(c=>{
+      const n=fila.filter(r=>r.cat===c&&estadoDe(r.key)===EST.NO).length; tot+=n;
+      const lvl=n===0?0:n===1?1:n===2?2:n<=4?3:4;
+      tds+=`<td><span class="cell c${lvl}">${n||"·"}</span></td>`;
+    });
+    h+=`<tr><td class="rh">${esc(e)}</td>${tds}<td><b class="num">${tot}</b></td></tr>`;
+  });
+  return h+`</tbody></table></div>`;
+}
+function hallazgos(base, nc, c, p){
+  const out=[];
+  if(p!==null) out.push(`<div class="find"><b>Cumplimiento ${p}%</b> sobre ${c.si+c.no} puntos evaluados${filtroLinea?" en "+esc(filtroLinea):""}.</div>`);
+  const tc=rank(nc,"cat")[0], te=rank(nc,"equipo")[0];
+  if(tc) out.push(`<div class="find crit">La categoría con más incumplimientos es <b>${esc(tc[0])}</b>: ${tc[1]} de ${nc.length} (${Math.round(tc[1]*100/nc.length)}%).</div>`);
+  if(te) out.push(`<div class="find crit">El equipo con más observaciones es <b>${esc(te[0])}</b>, con ${te[1]} puntos incumplidos.</div>`);
+  const alta=nc.filter(r=>r.crit==="Alta").length;
+  if(alta) out.push(`<div class="find crit"><b>${alta} no conformidades de criticidad alta.</b> Son las de riesgo eléctrico directo o parada de línea; van primero en el plan de acción.</div>`);
+  const sinObs=nc.filter(r=>!((R[r.key]||{}).o||"").trim()).length;
+  if(sinObs) out.push(`<div class="find warn"><b>${sinObs} sin observación registrada.</b> Complételas antes de cerrar: sin el hallazgo descrito no se puede abrir una acción correctiva.</div>`);
+  if(c.pend) out.push(`<div class="find warn"><b>${c.pend} puntos pendientes.</b> El porcentaje se calcula sólo sobre lo auditado, así que todavía puede moverse.</div>`);
+  return out.join("") || `<div class="empty">Sin datos suficientes.</div>`;
+}
+
+/* ---------------------------- exportar ---------------------------- */
+function vistaExportar(v){
+  $("#hTitle").textContent="Exportar";
+  $("#hSub").textContent="Planta Arequipa";
+  const c=cuenta(ROWS), nF=Object.keys(FOTOS).length;
+  const sinObs=ROWS.filter(r=>estadoDe(r.key)===EST.NO && !((R[r.key]||{}).o||"").trim()).length;
+
+  let h="";
+  if(sinObs) h+=`<div class="warn"><b>${sinObs} no conformidades sin observación.</b>
+     Conviene completarlas antes de exportar.</div>`;
+
+  h+=`<div class="box">
+    <h3>Excel diligenciado</h3>
+    <p>${PLANTILLA
+      ? "Plantilla guardada en este teléfono. El Excel sale con las columnas Cumple, Observación y Evidencia ya llenas, y el resumen se recalcula al abrirlo."
+      : "Cargue una vez el <b>Formato_Auditoria_Electrica_ACL.xlsx</b>. Queda guardado y no volverá a pedírselo."}</p>
+    ${PLANTILLA
+      ? `<button class="act" id="expXlsx">Descargar Excel</button>
+         <button class="act sec" id="camPl">Cambiar plantilla</button>`
+      : `<button class="act" id="camPl">Cargar plantilla Excel</button>`}
+  </div>
+
+  <div class="box"><h3>Registro fotográfico</h3>
+    <p>${nF} evidencia${nF===1?"":"s"} con su código, máquina y hallazgo. Se abre en el navegador y se puede guardar como PDF.</p>
+    <button class="act sec" id="expFotos" ${nF?"":"disabled"}>Descargar informe fotográfico</button></div>
+
+  <div class="box"><h3>Datos en CSV</h3>
+    <p>Por si prefiere revisar los datos sueltos o pegarlos a mano en <code>K4</code>.</p>
+    <button class="act sec" id="expCsv">Descargar CSV</button></div>
+
+  <div class="box"><h3>Espacio usado</h3>
+    <p id="espTxt">Calculando…</p>
+    <div class="tr" style="background:var(--paper);height:10px;border-radius:5px;overflow:hidden">
+      <div id="espBar" style="height:100%;background:var(--focus);width:0;transition:width .3s"></div>
+    </div>
+    <p id="espNota" style="margin:11px 0 0"></p></div>
+
+  <div class="box"><h3>Copia de seguridad</h3>
+    <p>Respuestas y fotos en un archivo, para continuar en otro teléfono o no perder nada si cambia de equipo.</p>
+    <button class="act sec" id="expBk">Descargar copia</button>
+    <button class="act sec" id="impBk">Restaurar desde copia</button></div>
+
+  <div class="box"><h3>Empezar de nuevo</h3>
+    <p>Borra todas las respuestas y fotos de este teléfono. No se puede deshacer.</p>
+    <button class="act dgr" id="borrar">Borrar toda la auditoría</button></div>
+  <div class="foot">${c.si+c.no+c.na} de ${c.total} puntos registrados</div>`;
+  v.innerHTML=h;
+
+  pintaEspacio(nF);
+  const bx=$("#expXlsx"); if(bx) bx.onclick=descargarExcel;
+  $("#camPl").onclick=()=>$("#filePl").click();
+  $("#expFotos").onclick=exportarFotos;
+  $("#expCsv").onclick=exportarCSV;
+  $("#expBk").onclick=exportarBackup;
+  $("#impBk").onclick=()=>$("#fileBk").click();
+  $("#borrar").onclick=borrarTodo;
+}
+
+async function pintaEspacio(nFotos){
+  const t=$("#espTxt"), b=$("#espBar"), n=$("#espNota");
+  if(!t) return;
+  const e=await espacio();
+  const pesoFotos = Object.values(FOTOS).reduce((s,f)=>s+(f.data?f.data.length:0),0);
+  const detalle = `${nFotos} foto${nFotos===1?"":"s"} · ${mb(pesoFotos)} aproximados`;
+  if(!e || !e.total){
+    t.innerHTML = detalle;
+    n.textContent = "";
+    b.style.width="0";
+  }else{
+    const pc = e.total ? (e.usado*100/e.total) : 0;
+    t.innerHTML = `${mb(e.usado)} de ${mb(e.total)} disponibles · ${detalle}`;
+    b.style.width = Math.max(pc,0.6)+"%";
+    const caben = pesoFotos && nFotos ? Math.floor((e.total-e.usado)/(pesoFotos/nFotos)) : null;
+    n.textContent = caben && caben < 100000
+      ? `Al ritmo actual caben unas ${caben.toLocaleString("es-PE")} fotos más.`
+      : "Espacio de sobra para la auditoría completa.";
+  }
+  if(persistente === false){
+    n.textContent += " El navegador no concedió almacenamiento permanente: podría borrar los datos si al teléfono le falta memoria. Instale la app en la pantalla de inicio y descargue la copia de seguridad al terminar cada línea.";
+  }
+}
+
+function bajar(nombre, contenido, tipo){ bajarBlob(nombre, new Blob([contenido],{type:tipo})); }
+function bajarBlob(nombre, blob){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=nombre;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+}
+const hoy = ()=>new Date().toISOString().slice(0,10);
+
+$("#filePl").addEventListener("change", async e=>{
+  const f=e.target.files[0]; e.target.value="";
+  if(!f) return;
+  if(!/\.xlsx$/i.test(f.name)){ toast("Debe ser un archivo .xlsx"); return; }
+  toast("Guardando plantilla…");
+  try{
+    const ab=await f.arrayBuffer();
+    leerZip(ab);                                    // validación temprana
+    PLANTILLA={nombre:f.name, datos:ab};
+    await put("plantilla", PLANTILLA);
+    toast("Plantilla guardada"); pinta();
+  }catch(err){ toast("No se pudo leer: "+err.message.slice(0,60)); }
+});
+
+async function descargarExcel(){
+  if(!PLANTILLA){ toast("Cargue primero la plantilla"); return; }
+  const b=$("#expXlsx"); b.disabled=true; b.textContent="Generando…";
+  try{
+    bajarBlob(`Auditoria_Arequipa_${hoy()}.xlsx`, await generarExcel(PLANTILLA.datos));
+    toast("Excel descargado");
+  }catch(err){ toast(err.message.slice(0,90)); }
+  finally{ b.disabled=false; b.textContent="Descargar Excel"; }
+}
+
+function exportarCSV(){
+  const q=v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;
+  const cab=["Linea","Equipo","ID","Punto de verificacion","Cumple","Observacion","Evidencia"];
+  const filas=ROWS.map(r=>{ const d=R[r.key]||{};
+    return [r.linea,r.equipo,r.id,r.texto,d.e||"",d.o||"",(d.f||[]).join(", ")].map(q).join(";"); });
+  bajar(`resultados_auditoria_${hoy()}.csv`,"\uFEFF"+[cab.map(q).join(";")].concat(filas).join("\r\n"),
+        "text/csv;charset=utf-8;");
+  toast("CSV descargado");
+}
+
+function exportarFotos(){
+  const c=cuenta(ROWS);
+  const items=Object.entries(FOTOS).sort((a,b)=>a[0].localeCompare(b[0]));
+  const cuerpo=items.map(([cod,f])=>{
+    const d=R[f.key]||{};
+    return `<div class="f"><img src="${f.data}" alt="${esc(cod)}">
+      <div><div class="c">${esc(cod)}</div>
+        <div class="e">${esc(f.linea)} · ${esc(f.equipo)}</div>
+        <div class="p"><b>${esc(f.id)}</b> ${esc(f.punto)}</div>
+        ${d.o?`<div class="o">${esc(d.o)}</div>`:""}
+        <div class="d">${new Date(f.fecha).toLocaleString("es-PE")}</div></div></div>`;
+  }).join("");
+  bajar(`registro_fotografico_${hoy()}.html`,
+`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Registro fotográfico · Auditoría ACL</title><style>
+body{font-family:Arial,Helvetica,sans-serif;background:#f2f4f7;color:#12181f;margin:0;padding:22px}
+h1{font-size:20px;margin-bottom:4px}.sub{color:#5f6f80;font-size:13px;margin-bottom:20px}
+.f{background:#fff;border:1px solid #dde3ea;border-radius:9px;padding:14px;margin-bottom:14px;
+   display:flex;gap:15px;page-break-inside:avoid}
+.f img{width:230px;border-radius:6px;flex:none}
+.c{font-weight:700;font-size:15px}.e{color:#5f6f80;font-size:13px;margin:3px 0 7px}
+.p{font-size:13.5px}.o{margin-top:7px;padding:8px 10px;background:#fbe7e5;border-radius:5px;font-size:13px}
+.d{color:#8894a3;font-size:11.5px;margin-top:7px}
+@media(max-width:640px){.f{flex-direction:column}.f img{width:100%}}
+@media print{body{background:#fff;padding:0}}
+</style></head><body>
+<h1>Registro fotográfico · Auditoría de tableros eléctricos</h1>
+<div class="sub">Planta Arequipa · ${new Date().toLocaleDateString("es-PE")} ·
+ ${items.length} evidencias · ${c.no} no conformidades</div>
+${cuerpo||"<p>Sin fotos.</p>"}</body></html>`, "text/html;charset=utf-8;");
+  toast("Informe descargado");
+}
+
+function exportarBackup(){
+  bajar(`respaldo_auditoria_${hoy()}.json`,
+        JSON.stringify({v:1, fecha:new Date().toISOString(), R, FOTOS}),
+        "application/json");
+  toast("Copia descargada");
+}
+$("#fileBk").addEventListener("change", e=>{
+  const f=e.target.files[0]; e.target.value="";
+  if(!f) return;
+  const fr=new FileReader();
+  fr.onload=async ()=>{
+    try{
+      const d=JSON.parse(fr.result);
+      if(!d.R) throw new Error("formato");
+      if(!confirm("Se reemplazarán las respuestas y fotos actuales. ¿Continuar?")) return;
+      R=d.R||{}; FOTOS=d.FOTOS||{};
+      await guardaResp();
+      for(const [c,v] of Object.entries(FOTOS)) await put("foto:"+c, v);
+      toast("Copia restaurada"); pinta();
+    }catch(err){ toast("El archivo no es una copia válida"); }
+  };
+  fr.readAsText(f);
+});
+
+async function borrarTodo(){
+  if(!confirm("Se borrarán todas las respuestas y fotos de este teléfono. ¿Continuar?")) return;
+  if(!confirm("Confirme una vez más: no se puede deshacer.")) return;
+  for(const c of Object.keys(FOTOS)) await del("foto:"+c);
+  R={}; FOTOS={};
+  await guardaResp();
+  toast("Auditoría reiniciada"); tab="auditar"; vista={n:"lineas"}; pinta();
+}
+
+window.addEventListener("beforeunload", e=>{
+  const c=cuenta(ROWS);
+  if(c.si+c.no+c.na>0){ e.preventDefault(); e.returnValue=""; }
+});
+
+/* ------------------------- espacio en disco ------------------------- */
+// Por defecto el navegador puede desalojar los datos si al teléfono le falta
+// memoria. Al pedir almacenamiento persistente deja de hacerlo. Se concede
+// casi siempre en una app instalada en la pantalla de inicio.
+let persistente = null;
+async function pedirPersistencia(){
+  try{
+    if(!navigator.storage || !navigator.storage.persist) return;
+    persistente = await navigator.storage.persisted();
+    if(!persistente) persistente = await navigator.storage.persist();
+  }catch(e){ persistente = null; }
+}
+async function espacio(){
+  try{
+    if(!navigator.storage || !navigator.storage.estimate) return null;
+    const {usage, quota} = await navigator.storage.estimate();
+    return {usado: usage||0, total: quota||0};
+  }catch(e){ return null; }
+}
+const mb = b => b >= 1073741824 ? (b/1073741824).toFixed(1)+" GB" : Math.round(b/1048576)+" MB";
+
+/* ---------------------------- arranque ---------------------------- */
+// Con el service worker la app queda guardada en el teléfono y abre sin señal.
+// Sólo funciona servida desde https:// (GitHub Pages); si no, se omite sin ruido.
+if("serviceWorker" in navigator && location.protocol === "https:"){
+  window.addEventListener("load", ()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+}
+
+(async function(){
+  await abrirDB();
+  await pedirPersistencia();
+  const todo=await getAll();
+  R = todo["respuestas"] || {};
+  PLANTILLA = todo["plantilla"] || null;
+  Object.keys(todo).forEach(k=>{ if(k.startsWith("foto:")) FOTOS[k.slice(5)]=todo[k]; });
+  pinta();
+  const c=cuenta(ROWS), hechos=c.si+c.no+c.na;
+  if(hechos) toast(`Auditoría recuperada · ${hechos} puntos`);
+})();
+
+</script>
+</body>
+</html>
