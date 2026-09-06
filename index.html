@@ -356,7 +356,9 @@ function del(k){
 let R = {};
 let FOTOS = {};          // "F-001" -> {data, key, linea, equipo, id, fecha}
 let PLANTILLA = null;    // {nombre, datos:ArrayBuffer} del Excel base
-const guardaResp = () => put("respuestas", R);
+let HALLAZGOS = {};      // hallazgos libres por tablero: {tabKey:[{id,texto,obs,f:[]}]}
+const guardaResp   = () => put("respuestas", R);
+const guardaHallazgos = () => put("hallazgos", HALLAZGOS);
 
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -699,7 +701,66 @@ function vistaPunto(v){
         <div class="photos">${fotos}<button class="addph" data-foto><b>+</b>Foto</button></div>
       </div></div>`;
   });
+  // ── hallazgos libres de este tablero ──
+  const hls = HALLAZGOS[t.key] || [];
+  h += `<div class="sect">Otros hallazgos</div>`;
+  hls.forEach((hl,hi)=>{
+    const fotos=(hl.f||[]).map(c=>FOTOS[c]?`<div class="ph" data-delhl="${c}" data-hli="${hi}" data-tk="${esc(t.key)}">
+        <img src="${FOTOS[c].data}" alt=""><div class="code">${c}</div><div class="x">×</div></div>`:"").join("");
+    h+=`<div class="pt" data-hl="${hi}" data-tk="${esc(t.key)}">
+      <div class="pt-top"><div class="pt-id num">#${hi+1}</div>
+        <div class="pt-tx" style="flex:1">${esc(hl.texto||"Sin descripción")}</div></div>
+      <div class="extra">
+        <label class="fl">Descripción del hallazgo</label>
+        <textarea data-hlobs placeholder="Describa el hallazgo…">${esc(hl.obs||"")}</textarea>
+        <div class="photos">${fotos}
+          <button class="addph" data-fotoHL="${hi}"><b>+</b>Foto</button></div>
+        <button style="background:var(--bad);color:#fff;padding:8px 14px;border-radius:8px;margin-top:10px;font-size:13px" data-borraHL="${hi}" data-tk="${esc(t.key)}">Eliminar hallazgo</button>
+      </div></div>`;
+  });
+  h+=`<button class="card" id="btnAgregarHL" style="border:2px dashed var(--focus);background:transparent;color:var(--focus);justify-content:center;gap:8px;font-weight:600">
+    <span style="font-size:1.5rem">+</span> Agregar hallazgo libre</button>`;
+
   v.innerHTML=h;
+
+  // ── agregar nuevo hallazgo ──
+  const btnHL=$("#btnAgregarHL");
+  if(btnHL) btnHL.onclick=()=>{
+    if(!HALLAZGOS[t.key]) HALLAZGOS[t.key]=[];
+    HALLAZGOS[t.key].push({texto:"Nuevo hallazgo #"+(HALLAZGOS[t.key].length+1), obs:"", f:[]});
+    guardaHallazgos(); pinta();
+  };
+
+  // ── eventos de hallazgos libres ──
+  v.querySelectorAll("[data-hl]").forEach(nodo=>{
+    const hi=+nodo.dataset.hl, tk=nodo.dataset.tk;
+    const ta=nodo.querySelector("[data-hlobs]");
+    if(ta){
+      ta.oninput=()=>{
+        if(HALLAZGOS[tk]&&HALLAZGOS[tk][hi]) HALLAZGOS[tk][hi].obs=ta.value;
+        guardaHallazgos();
+      };
+    }
+    const bFoto=nodo.querySelector("[data-fotoHL]");
+    if(bFoto) bFoto.onclick=()=>{ fotoPara=tk+"::hl::"+hi; $("#cam").click(); };
+    const bBorra=nodo.querySelector("[data-borraHL]");
+    if(bBorra) bBorra.onclick=()=>{
+      if(!confirm("¿Eliminar este hallazgo?")) return;
+      // borrar sus fotos
+      const hl=HALLAZGOS[tk]&&HALLAZGOS[tk][hi];
+      if(hl)(hl.f||[]).forEach(c=>{delete FOTOS[c]; del("foto:"+c);});
+      HALLAZGOS[tk].splice(hi,1);
+      guardaHallazgos(); pinta();
+    };
+  });
+  v.querySelectorAll("[data-delhl]").forEach(ph=>ph.onclick=()=>{
+    const c=ph.dataset.delhl, hi=+ph.dataset.hli, tk=ph.dataset.tk;
+    if(!confirm("¿Eliminar la foto "+c+"?")) return;
+    delete FOTOS[c]; del("foto:"+c);
+    if(HALLAZGOS[tk]&&HALLAZGOS[tk][hi])
+      HALLAZGOS[tk][hi].f=(HALLAZGOS[tk][hi].f||[]).filter(x=>x!==c);
+    guardaHallazgos(); pinta();
+  });
 
   v.querySelectorAll(".pt").forEach(nodo=>{
     const key=nodo.dataset.row;
@@ -769,18 +830,28 @@ $("#cam").addEventListener("change", async e=>{
   toast("Procesando foto…");
   try{
     const data=await comprimir(f), cod=nuevoCodigo();
-    const r=ROWS.find(x=>x.key===fotoPara);
-    FOTOS[cod]={data, key:fotoPara, linea:r.linea, equipo:r.equipo, id:r.id,
-                punto:r.texto, fecha:new Date().toISOString()};
-    const ok = await put("foto:"+cod, FOTOS[cod]);
-    if(ok === false){
-      delete FOTOS[cod];
-      toast("No se pudo guardar la foto: sin espacio. Descargue la copia y libere memoria.");
-      fotoPara=null; return;
+    const esHL = fotoPara.includes("::hl::");
+    if(esHL){
+      const parts=fotoPara.split("::hl::");
+      const tk=parts[0], hlidx=parseInt(parts[1]);
+      const t2=TABLEROS.find(x=>x.key===tk);
+      FOTOS[cod]={data, key:fotoPara, linea:t2?t2.linea:"", equipo:t2?t2.equipo:"",
+                  id:"HL."+(hlidx+1), punto:"Hallazgo libre", fecha:new Date().toISOString()};
+      const ok=await put("foto:"+cod, FOTOS[cod]);
+      if(ok===false){ delete FOTOS[cod]; toast("Sin espacio para guardar la foto."); fotoPara=null; return; }
+      if(!HALLAZGOS[tk]) HALLAZGOS[tk]=[];
+      if(HALLAZGOS[tk][hlidx]) HALLAZGOS[tk][hlidx].f=(HALLAZGOS[tk][hlidx].f||[]).concat(cod);
+      await guardaHallazgos();
+    }else{
+      const r=ROWS.find(x=>x.key===fotoPara);
+      FOTOS[cod]={data, key:fotoPara, linea:r.linea, equipo:r.equipo, id:r.id,
+                  punto:r.texto, fecha:new Date().toISOString()};
+      const ok=await put("foto:"+cod, FOTOS[cod]);
+      if(ok===false){ delete FOTOS[cod]; toast("Sin espacio para guardar la foto."); fotoPara=null; return; }
+      R[fotoPara]=R[fotoPara]||{f:[]};
+      R[fotoPara].f=(R[fotoPara].f||[]).concat(cod);
+      await guardaResp();
     }
-    R[fotoPara]=R[fotoPara]||{f:[]};
-    R[fotoPara].f=(R[fotoPara].f||[]).concat(cod);
-    await guardaResp();
     toast(cod+" adjuntada"); pinta();
   }catch(err){ toast("No se pudo procesar la foto"); }
   fotoPara=null;
@@ -1027,6 +1098,13 @@ function exportarCSV(){
   const cab=["Linea","Equipo","ID","Punto de verificacion","Cumple","Observacion","Causa","Evidencia"];
   const filas=ROWS.map(r=>{ const d=R[r.key]||{};
     return [r.linea,r.equipo,r.id,r.texto,d.e||"",d.o||"",d.c||"",(d.f||[]).join(", ")].map(q).join(";"); });
+  Object.entries(HALLAZGOS).forEach(([tk,hls])=>{
+    const t2=TABLEROS.find(x=>x.key===tk);
+    (hls||[]).forEach((hl,i)=>{
+      filas.push([t2?t2.linea:"",t2?t2.equipo:"","HL."+(i+1),"Hallazgo libre: "+(hl.texto||""),
+                  "No",hl.obs||"",(hl.c||""),(hl.f||[]).join(", ")].map(q).join(";"));
+    });
+  });
   bajar(`resultados_auditoria_${hoy()}.csv`,"\uFEFF"+[cab.map(q).join(";")].concat(filas).join("\r\n"),
         "text/csv;charset=utf-8;");
   toast("CSV descargado");
@@ -1034,6 +1112,7 @@ function exportarCSV(){
 
 function exportarFotos(){
   const c=cuenta(ROWS);
+  // incluir hallazgos libres en el informe
   const items=Object.entries(FOTOS).sort((a,b)=>a[0].localeCompare(b[0]));
   const cuerpo=items.map(([cod,f])=>{
     const d=R[f.key]||{};
@@ -1069,7 +1148,7 @@ ${cuerpo||"<p>Sin fotos.</p>"}</body></html>`, "text/html;charset=utf-8;");
 
 function exportarBackup(){
   bajar(`respaldo_auditoria_${hoy()}.json`,
-        JSON.stringify({v:1, fecha:new Date().toISOString(), R, FOTOS}),
+        JSON.stringify({v:1, fecha:new Date().toISOString(), R, FOTOS, HALLAZGOS}),
         "application/json");
   toast("Copia descargada");
 }
@@ -1082,8 +1161,9 @@ $("#fileBk").addEventListener("change", e=>{
       const d=JSON.parse(fr.result);
       if(!d.R) throw new Error("formato");
       if(!confirm("Se reemplazarán las respuestas y fotos actuales. ¿Continuar?")) return;
-      R=d.R||{}; FOTOS=d.FOTOS||{};
+      R=d.R||{}; FOTOS=d.FOTOS||{}; HALLAZGOS=d.HALLAZGOS||{};
       await guardaResp();
+      await guardaHallazgos();
       for(const [c,v] of Object.entries(FOTOS)) await put("foto:"+c, v);
       toast("Copia restaurada"); pinta();
     }catch(err){ toast("El archivo no es una copia válida"); }
@@ -1095,8 +1175,9 @@ async function borrarTodo(){
   if(!confirm("Se borrarán todas las respuestas y fotos de este teléfono. ¿Continuar?")) return;
   if(!confirm("Confirme una vez más: no se puede deshacer.")) return;
   for(const c of Object.keys(FOTOS)) await del("foto:"+c);
-  R={}; FOTOS={};
+  R={}; FOTOS={}; HALLAZGOS={};
   await guardaResp();
+  await guardaHallazgos();
   toast("Auditoría reiniciada"); tab="auditar"; vista={n:"lineas"}; pinta();
 }
 
@@ -1138,7 +1219,8 @@ if("serviceWorker" in navigator && location.protocol === "https:"){
   await pedirPersistencia();
   const todo=await getAll();
   R = todo["respuestas"] || {};
-  PLANTILLA = todo["plantilla"] || null;
+  PLANTILLA  = todo["plantilla"] || null;
+  HALLAZGOS  = todo["hallazgos"]  || {};
   Object.keys(todo).forEach(k=>{ if(k.startsWith("foto:")) FOTOS[k.slice(5)]=todo[k]; });
   pinta();
   const c=cuenta(ROWS), hechos=c.si+c.no+c.na;
