@@ -500,14 +500,15 @@ async function generarExcel(plantillaAB){
   if(!mr) throw new Error("No se pudo ubicar la hoja Checklist dentro del archivo.");
   const ruta = "xl/" + mr[1].replace(/^\/?xl\//,"");
 
-  // K = Cumple, L = Observación, M = Evidencia; fila 4 en adelante,
-  // en el mismo orden en que se generaron ROWS.
+  // K = Cumple, L = Observación, M = Causa/descargo, N = Evidencia;
+  // fila 4 en adelante, en el mismo orden en que se generaron ROWS.
   const valores = {};
   ROWS.forEach((r,i)=>{
     const d = R[r.key] || {}, f = 4 + i;
     valores["K"+f] = d.e || "";
     valores["L"+f] = d.o || "";
-    valores["M"+f] = (d.f||[]).join(", ");
+    valores["M"+f] = d.c || "";
+    valores["N"+f] = (d.f||[]).join(", ");
   });
   const hoja = escribirCeldas(await crudo(ruta), valores);
 
@@ -693,6 +694,8 @@ function vistaPunto(v){
         <textarea data-obs placeholder="${st===EST.NO?"Describa el hallazgo concreto…":"Opcional"}"
           class="${st===EST.NO&&!(d.o||"").trim()?"req":""}">${esc(d.o||"")}</textarea>
         ${st===EST.NO&&!(d.o||"").trim()?'<div class="hint">Sin descripción del hallazgo no se puede abrir la acción correctiva.</div>':""}
+        ${st===EST.NO?`<label class="fl" style="margin-top:11px">Causa / descargo</label>
+          <textarea data-causa placeholder="Por qué no cumple. Es lo que orienta la acción.">${esc(d.c||"")}</textarea>`:""}
         <div class="photos">${fotos}<button class="addph" data-foto><b>+</b>Foto</button></div>
       </div></div>`;
   });
@@ -711,6 +714,8 @@ function vistaPunto(v){
       ta.oninput=()=>{ R[key]=R[key]||{f:[]}; R[key].o=ta.value; guardaResp(); };
       ta.onblur =()=>{ if(estadoDe(key)===EST.NO) pinta(); };
     }
+    const tc=nodo.querySelector("[data-causa]");
+    if(tc) tc.oninput=()=>{ R[key]=R[key]||{f:[]}; R[key].c=tc.value; guardaResp(); };
     const bf=nodo.querySelector("[data-foto]");
     if(bf) bf.onclick=()=>{ fotoPara=key; $("#cam").click(); };
     nodo.querySelectorAll("[data-del]").forEach(ph=>ph.onclick=()=>{
@@ -847,6 +852,7 @@ function vistaPanel(v){
         <div class="m">${esc(r.linea)} · ${esc(r.cat)}</div>
         <div class="m">${esc(r.texto)}</div>
         ${d.o?`<div class="o">${esc(d.o)}</div>`:'<div class="o">Sin observación registrada</div>'}
+        ${d.c?`<div class="o" style="background:var(--amberbg);color:var(--amber)">Causa: ${esc(d.c)}</div>`:""}
         ${(d.f||[]).length?`<div class="m">Evidencia: ${(d.f||[]).join(", ")}</div>`:""}</div>`;
     });
     if(nc.length>60) h+=`<p style="margin:0">Se muestran las 60 primeras. El Excel las incluye todas.</p>`;
@@ -1018,9 +1024,9 @@ async function descargarExcel(){
 
 function exportarCSV(){
   const q=v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;
-  const cab=["Linea","Equipo","ID","Punto de verificacion","Cumple","Observacion","Evidencia"];
+  const cab=["Linea","Equipo","ID","Punto de verificacion","Cumple","Observacion","Causa","Evidencia"];
   const filas=ROWS.map(r=>{ const d=R[r.key]||{};
-    return [r.linea,r.equipo,r.id,r.texto,d.e||"",d.o||"",(d.f||[]).join(", ")].map(q).join(";"); });
+    return [r.linea,r.equipo,r.id,r.texto,d.e||"",d.o||"",d.c||"",(d.f||[]).join(", ")].map(q).join(";"); });
   bajar(`resultados_auditoria_${hoy()}.csv`,"\uFEFF"+[cab.map(q).join(";")].concat(filas).join("\r\n"),
         "text/csv;charset=utf-8;");
   toast("CSV descargado");
@@ -1036,6 +1042,7 @@ function exportarFotos(){
         <div class="e">${esc(f.linea)} · ${esc(f.equipo)}</div>
         <div class="p"><b>${esc(f.id)}</b> ${esc(f.punto)}</div>
         ${d.o?`<div class="o">${esc(d.o)}</div>`:""}
+        ${d.c?`<div class="o" style="background:#fdf3d7">Causa: ${esc(d.c)}</div>`:""}
         <div class="d">${new Date(f.fecha).toLocaleString("es-PE")}</div></div></div>`;
   }).join("");
   bajar(`registro_fotografico_${hoy()}.html`,
