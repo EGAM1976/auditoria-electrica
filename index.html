@@ -225,7 +225,22 @@ const CATS = [
    ["Hay espacio suficiente para intervenir el tablero con seguridad.","Media"],
    ["La puerta abre correctamente y no obstruye el paso.","Media"],
    ["Tiene registro de mantenimiento reciente o programado.","Baja"]]],
+ // Se pregunta en cada tablero porque cada máquina tiene su propio programa.
+ ["8. Respaldo del Software de Control","IND-INGM-POL-001 · IEC 62443-2-1",[
+   ["Backup actualizado y almacenado en lugar seguro.","Alta"],
+   ["Integridad y accesibilidad del backup.","Alta"],
+   ["El programa está identificado con versión y fecha del último cambio.","Media"]]],
 ];
+
+// Condiciones de planta: se responden una sola vez, no tablero por tablero.
+const SISTEMAS = ["Sistemas Software de Control","IND-INGM-POL-001 · IEC 62443-2-1",[
+   ["La PG Siemens y el disco duro tienen lugar seguro para su resguardo.","Alta"],
+   ["Los técnicos conocen las rutas donde se encuentran los programas: PG, PC y OneDrive.","Alta"],
+   ["Los accesos a OneDrive del personal de mantenimiento están vigentes y a nombre de usuarios activos.","Alta"],
+   ["Existe hoja de ruta en SAP para el respaldo del software de control.","Media"],
+   ["Se ha probado la restauración de un respaldo en al menos un equipo.","Alta"],
+   ["El personal ha sido capacitado en el procedimiento de respaldo y restauración.","Media"]]];
+const LINEA_SC = "Sistemas de control";
 
 const LINEAS = [
  ["Vidrio",[
@@ -271,9 +286,18 @@ LINEAS.forEach(([linea,maqs])=>maqs.forEach(([maquina,equipo],mi)=>{
     });
   });
 }));
+// El bloque de planta va al final, igual que en la hoja Checklist, para que
+// la escritura en el Excel siga cuadrando fila por fila.
+SISTEMAS[2].forEach(([texto,crit],pi)=>{
+  ROWS.push({key:`SC|0|9.${pi+1}`, linea:LINEA_SC, maquina:"Condición de planta",
+             equipo:"PLANTA", tabKey:"SC|0", cat:SISTEMAS[0], norma:SISTEMAS[1],
+             id:`9.${pi+1}`, texto, crit});
+});
+
 const TABLEROS = [];
 LINEAS.forEach(([linea,maqs])=>maqs.forEach(([maquina,equipo],mi)=>
   TABLEROS.push({key:`${linea}|${mi}`, linea, maquina, equipo})));
+TABLEROS.push({key:"SC|0", linea:LINEA_SC, maquina:"Condición de planta", equipo:"Sistemas de control"});
 
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -552,7 +576,8 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 });
 $("#back").onclick=()=>{
   if(vista.n==="tableros") vista={n:"lineas"};
-  else if(vista.n==="punto") vista={n:"tableros",linea:TABLEROS[idxTablero].linea};
+  else if(vista.n==="punto") vista = TABLEROS[idxTablero].linea===LINEA_SC
+      ? {n:"lineas"} : {n:"tableros",linea:TABLEROS[idxTablero].linea};
   pinta(); window.scrollTo(0,0);
 };
 $("#prev").onclick=()=>{ if(idxTablero>0){ idxTablero--; pinta(); window.scrollTo(0,0);} };
@@ -605,9 +630,19 @@ function vistaLineas(v){
         <div class="s">${maqs.length} tableros · ${c.si+c.no+c.na} de ${pts.length} puntos${c.no?` · ${c.no} no cumple`:""}</div></div>
       <div class="chev">›</div></button>`;
   });
+  // El bloque de planta no cuelga de ninguna línea: entra directo a sus puntos.
+  const sc=ROWS.filter(r=>r.linea===LINEA_SC), csc=cuenta(sc);
+  const psc=Math.round((csc.si+csc.no+csc.na)*100/sc.length);
+  h+=`<div class="sect">Condiciones de planta</div>
+    <button class="card" data-sc="1">${anillo(psc,csc.no)}
+      <div class="body"><div class="t">Sistemas de control</div>
+        <div class="s">Respaldo del software · ${csc.si+csc.no+csc.na} de ${sc.length} puntos${csc.no?` · ${csc.no} no cumple`:""}</div></div>
+      <div class="chev">›</div></button>`;
   h+=`<div class="foot">Los datos quedan en este teléfono.<br>Nada se envía a ningún servidor.</div>`;
   v.innerHTML=h;
   const bk=$("#bkYa"); if(bk) bk.onclick=exportarBackup;
+  const bsc=v.querySelector("[data-sc]");
+  if(bsc) bsc.onclick=()=>{ idxTablero=TABLEROS.length-1; vista={n:"punto"}; pinta(); window.scrollTo(0,0); };
   v.querySelectorAll("[data-linea]").forEach(b=>b.onclick=()=>{
     vista={n:"tableros",linea:b.dataset.linea}; pinta(); window.scrollTo(0,0); });
 }
