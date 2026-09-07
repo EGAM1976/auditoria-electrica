@@ -1079,6 +1079,11 @@ function vistaExportar(v){
       : `<button class="act" id="camPl">Cargar plantilla Excel</button>`}
   </div>
 
+  <div class="box" style="border-left:4px solid var(--ok)"><h3>Enviar a mi correo</h3>
+    <p>Descarga el Excel y el paquete de fotos, y abre Outlook con el correo listo para <b>EAmpuero@lindley.pe</b>. Solo arrastre los dos archivos descargados y pulse Enviar.</p>
+    <button class="act" id="btnEnviar" ${PLANTILLA?"":"disabled"}>Preparar y enviar por correo</button>
+    ${PLANTILLA?"":'<p style="color:var(--bad);font-size:12.5px;margin:8px 0 0">Cargue primero la plantilla Excel.</p>'}</div>
+
   <div class="box"><h3>Registro fotográfico</h3>
     <p>${nF} evidencia${nF===1?"":"s"} con su código, máquina y hallazgo. Se abre en el navegador y se puede guardar como PDF.</p>
     <button class="act sec" id="expFotos" ${nF?"":"disabled"}>Descargar informe fotográfico</button></div>
@@ -1112,12 +1117,64 @@ function vistaExportar(v){
   pintaEspacio(nF);
   const bx=$("#expXlsx"); if(bx) bx.onclick=descargarExcel;
   $("#camPl").onclick=()=>$("#filePl").click();
+  const be=$("#btnEnviar"); if(be) be.onclick=enviarPorCorreo;
   $("#expFotos").onclick=exportarFotos;
   $("#expPaquete").onclick=exportarPaquete;
   $("#expCsv").onclick=exportarCSV;
   $("#expBk").onclick=exportarBackup;
   $("#impBk").onclick=()=>$("#fileBk").click();
   $("#borrar").onclick=borrarTodo;
+}
+
+// Descarga Excel + paquete de fotos y abre el correo ya redactado.
+// El navegador no puede adjuntar archivos por seguridad: quedan en Descargas
+// y el usuario los arrastra al correo antes de enviar.
+async function enviarPorCorreo(){
+  if(!PLANTILLA){ toast("Cargue primero la plantilla"); return; }
+  const b=$("#btnEnviar"); b.disabled=true; b.textContent="Preparando…";
+  try{
+    // 1. Excel
+    const blob = await generarExcel(PLANTILLA.datos);
+    bajarBlob(`Auditoria_Arequipa_${hoy()}.xlsx`, blob);
+    // 2. Paquete de fotos (si hay)
+    let hayFotos=false;
+    if(Object.keys(FOTOS).length){ exportarPaquete(); hayFotos=true; }
+
+    // 3. Resumen para el cuerpo del correo
+    const c=cuenta(ROWS);
+    const pct = (c.si+c.no) ? Math.round(c.si*100/(c.si+c.no)) : 0;
+    const nHL = Object.values(HALLAZGOS).reduce((s,a)=>s+(a?a.length:0),0);
+
+    const asunto = `Auditoria electrica de tableros - Arequipa - ${hoy()}`;
+    const cuerpo =
+`Estimado,
+
+Adjunto los resultados de la auditoria electrica de tableros realizada en la planta de Arequipa.
+
+Resumen:
+- Cumplimiento: ${pct}%
+- Puntos que cumplen: ${c.si}
+- No conformidades: ${c.no}
+- Hallazgos libres: ${nHL}
+- Pendientes de evaluar: ${c.pend}
+
+Archivos descargados en este dispositivo (por favor adjuntarlos antes de enviar):
+1. Auditoria_Arequipa_${hoy()}.xlsx  - resultados de la auditoria
+${hayFotos?`2. paquete_panel_${hoy()}.json  - evidencias fotograficas para el Panel de PC\n`:""}
+Saludos cordiales,
+Edwin Gino Ampuero Mori
+Especialista en Control, Automatizacion y Mejora Continua`;
+
+    // 4. Abrir el cliente de correo
+    const url = `mailto:EAmpuero@lindley.pe?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    // pequeño respiro para que terminen las descargas antes de abrir el correo
+    setTimeout(()=>{ location.href = url; }, 900);
+    toast("Archivos descargados. Adjúntelos en el correo.");
+  }catch(err){
+    toast("Error: "+err.message.slice(0,70));
+  }finally{
+    b.disabled=false; b.textContent="Preparar y enviar por correo";
+  }
 }
 
 // Paquete para el Panel de PC: resultados + fotos incrustadas en un JSON.
