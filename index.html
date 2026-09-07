@@ -1165,10 +1165,24 @@ Saludos cordiales,
 Edwin Gino Ampuero Mori
 Especialista en Control, Automatizacion y Mejora Continua`;
 
-    // 4. Abrir el cliente de correo
-    const url = `mailto:EAmpuero@lindley.pe?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    const dest = "EAmpuero@lindley.pe";
+    // Outlook Web de Office 365: abre un correo nuevo ya redactado en la
+    // sesión de Outlook del usuario (Outlook a Outlook). Si no tiene sesión
+    // web, cae al cliente de correo del teléfono con el mismo contenido.
+    const owa = "https://outlook.office.com/mail/deeplink/compose?to=" +
+      encodeURIComponent(dest) +
+      "&subject=" + encodeURIComponent(asunto) +
+      "&body=" + encodeURIComponent(cuerpo);
+    const mailto = "mailto:" + dest +
+      "?subject=" + encodeURIComponent(asunto) +
+      "&body=" + encodeURIComponent(cuerpo);
+
     // pequeño respiro para que terminen las descargas antes de abrir el correo
-    setTimeout(()=>{ location.href = url; }, 900);
+    setTimeout(()=>{
+      // intentar Outlook Web en pestaña nueva; si el navegador lo bloquea, usar mailto
+      const w = window.open(owa, "_blank");
+      if(!w) location.href = mailto;
+    }, 900);
     toast("Archivos descargados. Adjúntelos en el correo.");
   }catch(err){
     toast("Error: "+err.message.slice(0,70));
